@@ -1,37 +1,40 @@
-## Welcome to GitHub Pages
+# Staff Notes Project
 
-You can use the [editor on GitHub](https://github.com/thinkthatover/ymca_staff_notes/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+## Introduction
+I created a Google Sheets program in 2019 to help organize communication between employees and management at the gym I worked at, and practice using some of the JavaScript skills I had learned in Harvards CS50x course on an Excel-adjacent application. The sheets were split into different tabs:
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+- Facility/General
+- Billing
+- Missed Hours
+- Trainer Notes
 
-### Markdown
+as well as a couple of data sheets for populating dropdowns, storing deleted messages and sending automated messages to trainers when a personal training form had been filled. All of the Javascript for the project was saved in the 'code.gs' file found in the "Tools-> Script Editor" dropdown.
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
 
-```markdown
-Syntax highlighted code block
+## Facilities Page
+Primarily though, most of the communication happened on the Facility/General Tab.
+![facility page](/images/Facilities.png)
 
-# Header 1
-## Header 2
-### Header 3
+### Usage
+Using the page was pretty straightforward. An employee selects their name from the `From` column, selects a `Tag` (another employee, broken equipment, etc.) and explains the issue/note in the `Description` Column. From there, the `Completed` column cell would automatically be set to "No", and add a datestamp to the next column. This was accomplished by creating a trigger (edit->Current Project Triggers in the Script Editor) and calling a created `checkedit` function. When someone responded to the note in the `Response` column, The `checkedit` function would also change the value of the `Completed` column to "Addressed", marking it for cleanup in the weekly triggered `cleansheets` function 
 
-- Bulleted
-- List
+Below is a snippet of some of the logic used in the checkedit function for marking the `Response` column.
 
-1. Numbered
-2. List
+```javascript
+//mark rows as addressed if response added
+if (editCol == respCol && compString !== "Yes"){
+    sheet.getRange(editRow, compCol).setValue("Addressed");
+}
 
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+if (dateCol > 0 && (editCol == tagCol || editCol == nameCol) && editRow !== 1){   //if date header exists, edited row not in header) 
+    sheet.getRange(editRow, dateCol).setValue(Utilities.formatDate(new Date(), "GMT-5", "MM/dd/yyyy"));
+    sheet.getRange(editRow, compCol).setValue("No");
+}
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+As mentioned above, the response column served two purposes. By highlighting the color of each `Completed Cell` (right click cell-> color formatting-> add rule), it provided a visual cue for employees to notice unaddressed notes. The second was marking each row for the `cleansheets` function.
 
-### Jekyll Themes
+## Keeping Organized: `cleansheets`
+By far the most difficult part (besides headaches with permission's to create triggers and send automated emails) of maintaining the application was just keeping each page up to date; removing successfully addressed issues and keeping the number of rows/messages in each tab at a manageable, not-having-to-scroll-for-hours level. Also, we wanted to keep a record of each of the completed entries in case there was some related issue down the line, there would be an electronic paper trail to follow. But manually moving each row to a deleted files sheet was not something I was willing to do.  
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/thinkthatover/ymca_staff_notes/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+Removing(and moving) completed rows was accomplished by the `cleansheets` function. This function would, by a trigger run weekly on Sundays remove all messages in all designated sheets older than 14 days that weren't marked as "Urgent" or "No" to a separate sheet called `Completed Entries`, along with the Sheet and the day the message was added.
